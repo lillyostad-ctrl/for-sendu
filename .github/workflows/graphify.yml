@@ -1,0 +1,74 @@
+# Sendō — هر شب گراف عمیق‌تری از حافظه با graphify می‌سازد (اختیاری)
+# فقط وقتی اجرا می‌شود که در اپ «graphify» را روشن کرده باشید (secret GRAPHIFY_API_KEY و فایل .graphify/config.json).
+name: "Sendō · graphify"
+
+on:
+  schedule:
+    - cron: "17 22 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sendo-graphify
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  graphify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: آیا لازم است؟
+        id: check
+        env:
+          KEY: ${{ secrets.GRAPHIFY_API_KEY }}
+        run: |
+          if [ -z "$KEY" ] || [ ! -f .graphify/config.json ]; then echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          last_mind=$(git log -1 --format=%ct -- mind/ notes/ || echo 0)
+          last_graph=$(git log -1 --format=%ct -- .graphify/graph.json || echo 0)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${last_mind:-0}" -gt "${last_graph:-0}" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+          echo "backend=$(python3 -c 'import json;print(json.load(open(".graphify/config.json")).get("backend","gemini"))')" >> "$GITHUB_OUTPUT"
+          echo "model=$(python3 -c 'import json;print(json.load(open(".graphify/config.json")).get("model",""))')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: نصب graphify
+        if: steps.check.outputs.run == 'true'
+        run: pipx install "graphifyy[gemini]" || pipx install graphifyy
+
+      - name: ساخت گراف
+        if: steps.check.outputs.run == 'true'
+        env:
+          KEY: ${{ secrets.GRAPHIFY_API_KEY }}
+          BACKEND: ${{ steps.check.outputs.backend }}
+          MODEL: ${{ steps.check.outputs.model }}
+        run: |
+          case "$BACKEND" in
+            gemini) export GEMINI_API_KEY="$KEY" ;;
+            claude) export ANTHROPIC_API_KEY="$KEY" ;;
+            openai) export OPENAI_API_KEY="$KEY" ;;
+          esac
+          mkdir -p /tmp/corpus && cp -r mind notes /tmp/corpus/ 2>/dev/null || true
+          rm -f /tmp/corpus/mind/graph.json
+          args="extract /tmp/corpus --backend $BACKEND --out /tmp/graphify-out --max-concurrency 1"
+          if [ -n "$MODEL" ]; then args="$args --model $MODEL"; fi
+          graphify $args
+          cp /tmp/graphify-out/graph.json .graphify/graph.json
+          cp /tmp/graphify-out/GRAPH_REPORT.md .graphify/GRAPH_REPORT.md
+
+      - name: ذخیره
+        if: steps.check.outputs.run == 'true'
+        run: |
+          git config user.name "Sendō"
+          git config user.email "sendo@users.noreply.github.com"
+          git add .graphify/graph.json .graphify/GRAPH_REPORT.md
+          git diff --cached --quiet || git commit -m "[Sendō] graphify: نقشه‌ی عمیق حافظه"
+          git pull --rebase origin HEAD && git push

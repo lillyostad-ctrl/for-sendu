@@ -1,0 +1,41 @@
+{
+ "version": 1,
+ "core": "",
+ "nodes": {
+  "me": {
+   "id": "me",
+   "type": "self",
+   "name": "لیلی",
+   "aliases": [],
+   "summary": "",
+   "facts": [],
+   "fields": {},
+   "tags": [],
+   "importance": 5,
+   "status": "active",
+   "notes": [],
+   "mentions": 0,
+   "created": "2026-10-13T05:45:33.121Z",
+   "updated": "2026-10-13T05:45:33.121Z"
+  }
+ },
+ "edges": [],
+ "profile": {
+  "big5": {},
+  "values": [],
+  "strengths": [],
+  "roles": [],
+  "domains": {},
+  "lifestyle": {},
+  "patterns": [],
+  "stressors": [],
+  "coping": [],
+  "motivators": [],
+  "communication": [],
+  "change": [],
+  "mood": [],
+  "insights": [],
+  "updated": "2026-10-13T05:45:33.121Z"
+ },
+ "updated": "2026-10-13T05:45:33.121Z"
+}

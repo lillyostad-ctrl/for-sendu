@@ -1,0 +1,5 @@
+.graphify/cache/
+.graphify/cost.json
+.graphify/graph.html
+graphify-out/
+.DS_Store

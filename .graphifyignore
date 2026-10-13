@@ -1,0 +1,5 @@
+.graphify/
+.github/
+graphify-out/
+journal/
+*.json
